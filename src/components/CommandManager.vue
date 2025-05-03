@@ -25,9 +25,11 @@ const invokeCommand = async (module: CommandType) => {
       logN.warning('后端返回的参数', module.name, res)
       module.result = JSON.stringify(res, null, 2)
     }).catch((err) => {
+      console.error(err)
       module.result = `Error: ${err.message}`
     })
   } catch (error) {
+    console.error(err)
     module.result = `Error: ${error}`
   }
 }

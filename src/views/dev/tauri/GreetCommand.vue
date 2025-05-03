@@ -4,14 +4,14 @@ import type { CommandType } from '@/types/command'
 
 const commands: CommandType[] = [
   {
-    name: 'get_exif_info',
+    name: 'greet',
     description: '查询exif信息',
     params: [
       {
-        name: 'path',
-        label: 'path',
+        name: 'name',
+        label: 'name',
         type: 'text',
-        value: 'D:\\argus\\argus-src\\src-tauri\\resources\\image\\image-1-1.JPG',
+        value: 'Vue',
         placeholder: 'string'
       }
     ],
