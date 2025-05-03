@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "net-src",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.tauri.netsentinel",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -26,7 +26,7 @@
   "bundle": {
     "resources": {
       "./resources/windivert/WinDivert64.sys": "lib/WinDivert64.sys",
-      "./windivert/WinDivert.dll": "lib/WinDivert.dll"
+      "./windivert/WinDivert.dll": "./WinDivert.dll"
     },
     "active": true,
     "targets": "all",
