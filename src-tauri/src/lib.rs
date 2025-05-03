@@ -1,6 +1,7 @@
 mod commands;
 mod constant;
 mod utils;
+mod core;
 
 use std::error::Error;
 use tauri::{App, Emitter, Listener, Manager, State, WindowEvent};
