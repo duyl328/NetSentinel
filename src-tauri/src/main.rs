@@ -5,33 +5,32 @@
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 fn main() {
+    test_windivert_open();
 
-  test_windivert_open();
-
-  app_lib::run();
+    app_lib::run();
 }
 
 #[allow(non_snake_case)]
 fn test_windivert_open() {
-  use std::ffi::CString;
-  use std::ptr;
-  use std::os::raw::c_char;
+    use std::ffi::CString;
+    use std::os::raw::c_char;
+    use std::ptr;
 
-  unsafe {
-    let filter = CString::new("true").unwrap();  // 捕获所有包
-    let handle = WinDivertOpen(
-      filter.as_ptr() as *const c_char,
-      0, // Layer
-      0, // Priority
-      0, // Flags
-    );
+    unsafe {
+        let filter = CString::new("true").unwrap(); // 捕获所有包
+        let handle = WinDivertOpen(
+            filter.as_ptr() as *const c_char,
+            0, // Layer
+            0, // Priority
+            0, // Flags
+        );
 
-    if handle.is_null() {
-      log::warn!("❌ WinDivertOpen failed.");
-      println!("❌ WinDivertOpen failed.");
-    } else {
-      println!("✅ WinDivertOpen succeeded!");
-      log::info!("❌ WinDivertOpen failed.");
+        if handle.is_null() {
+            log::warn!("❌ WinDivertOpen failed.");
+            println!("❌ WinDivertOpen failed.");
+        } else {
+            println!("✅ WinDivertOpen succeeded!");
+            log::info!("❌ WinDivertOpen failed.");
+        }
     }
-  }
 }

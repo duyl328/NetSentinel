@@ -4,7 +4,7 @@ fn detect_arch() {
     // unsafe {
     //     let mut info: SYSTEM_INFO = std::mem::zeroed();
     //     GetNativeSystemInfo(&mut info);
-    // 
+    //
     //     match info.wProcessorArchitecture {
     //         9 => println!("x64"),
     //         0 => println!("x86"),

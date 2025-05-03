@@ -11,7 +11,6 @@ pub fn greet(name: &str) -> String {
         });
         Ok(())
     });
-
+    log::error!("{:?}", "你好！！！！！！！！！！！！！");
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
-
