@@ -51,6 +51,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::command::greet,
             commands::win_divert::win_divert_command,
+            commands::win_divert::monitor_network_with_windivert_command,
         ])
         .setup(main_setup())
         .run(tauri::generate_context!())
