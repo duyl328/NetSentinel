@@ -1,1 +1,2 @@
-mod win_divert;
+pub(crate) mod win_divert;
+mod core;

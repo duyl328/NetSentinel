@@ -23,6 +23,56 @@
 | 8️⃣ | **防火墙可视化管理界面（集成系统规则或模拟 SimpleWall）** | ⭐⭐⭐⭐  | 调用系统 API 或完全自建规则系统 | 高价值但开发量大，可作为后期扩展       |
 
 
+# 线程危险评估
+
+1. 文件来源与完整性
+   项目	说明	检查方式
+   数字签名	是否有可信机构签名（如 Microsoft、Intel）	使用 WinVerifyTrust
+   是否篡改	哈希是否与预期匹配	SHA256 + 数据库对比
+   文件路径	是否位于系统可信目录（如 C:\Windows\System32）	检查 GetModuleFileName 路径
+   ✅ 二、系统可信目录有哪些？
+   系统目录不仅包括 C:\Windows\System32，还包括以下路径：
+
+| 可信目录路径                                                | 说明                                    |
+| ----------------------------------------------------- | ------------------------------------- |
+| `C:\Windows\System32`                                 | 64 位系统组件                              |
+| `C:\Windows\SysWOW64`                                 | 32 位系统组件（在 64 位 Windows 上）            |
+| `C:\Windows\WinSxS`                                   | Windows 组件存储（side-by-side assemblies） |
+| `C:\Windows\SystemApps`                               | UWP 系统应用                              |
+| `C:\Windows\servicing`                                | 安装组件信息                                |
+| `C:\Windows\explorer.exe`, `C:\Windows\notepad.exe` 等 | 核心 UI 组件                              |
+| `C:\Program Files\Windows Defender`                   | Windows 自带安全软件                        |
+| `C:\Program Files (x86)\Windows Defender`             | 同上，32 位版本                             |
+| `C:\Program Files\WindowsApps`                        | Microsoft Store App 安装目录（注意权限控制）      |
+
+
+2. 进程行为特征
+   项目	说明	检查方式
+   是否注入到其他进程	多见于恶意行为	使用 NtQueryInformationProcess 等 API 分析父子关系或钩子
+   是否持续监听任意地址端口（如 0.0.0.0:445）	系统服务行为？还是可疑开放？	分析绑定地址行为（WinDivert可看到）
+   是否创建大量连接（DoS/挖矿特征）	快速短连接、频繁连接多个IP	统计连接频次+连接数异常告警
+
+3. 联网目标信息
+   项目	说明	检查方式
+   IP地址是否可疑	黑名单IP？海外？CN外？	GeoIP判断 + 威胁情报库
+   是否连接知名矿池/VPN出口/恶意主机	对照IOC库（如 AbuseIPDB、VirusTotal）	提前集成威胁源数据库或定时更新本地数据库
+
+4. 服务/父进程属性
+   项目	说明	检查方式
+   是哪一个服务创建的连接	是否为可信 Windows 服务？	结合 PID -> ServiceName 映射
+   是 GUI 应用？还是隐藏进程？	无 UI 且持久后台更可疑	分析进程属性
+
+5. 网络协议特征
+   项目	说明	检查方式
+   是否使用非典型协议（ICMP、ESP等）	除 TCP/UDP 外使用其他协议可能绕过控制	WinDivert 支持识别协议，过滤条件中 ip.Protocol == X
+   是否通过 DNS tunneling	使用 DNS 协议进行数据传输	检查 DNS 请求的频率/长度/行为
+
+6. 社区威胁情报
+   项目	说明	检查方式
+   是否为已知威胁行为	被社区/数据库标注为恶意程序	集成 VirusTotal、AbuseIPDB、HybridAnalysis API 等
+
+
+
 # TODO LIST
 2025年5月3日 19点42分
 [ ] 获取联网程序和联网列表

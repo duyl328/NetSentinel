@@ -48,7 +48,10 @@ pub fn run() {
     println!("日志路径: {:?}", constant::LOG_PATH);
 
     builder
-        .invoke_handler(tauri::generate_handler![commands::command::greet,])
+        .invoke_handler(tauri::generate_handler![
+            commands::command::greet,
+            commands::win_divert::win_divert_command,
+        ])
         .setup(main_setup())
         .run(tauri::generate_context!())
         .expect("启动失败!");
