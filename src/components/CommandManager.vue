@@ -108,6 +108,9 @@ const invokeCommand = async (module: CommandType) => {
         font-size: 1.125rem; // text-lg
         font-weight: 600; // font-semibold
         margin-bottom: 0.5rem; // mb-2
+        user-select: text;     /* 允许选中 */
+        pointer-events: auto;  /* 确保可以响应鼠标操作 */
+
       }
 
       .module-description {
@@ -186,6 +189,8 @@ const invokeCommand = async (module: CommandType) => {
         .result-content {
           font-size: 0.875rem; // text-sm
           white-space: pre-wrap;
+          user-select: text;     /* 允许选中 */
+          pointer-events: auto;  /* 确保可以响应鼠标操作 */
         }
       }
     }

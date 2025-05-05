@@ -25,7 +25,7 @@
   },
   "bundle": {
     "resources": {
-      "./resources/windivert/WinDivert64.sys": "lib/WinDivert64.sys",
+      "./resources/windivert/WinDivert64.sys": "./WinDivert64.sys",
       "./windivert/WinDivert.dll": "./WinDivert.dll"
     },
     "active": true,

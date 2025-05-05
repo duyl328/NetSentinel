@@ -1,7 +1,7 @@
 mod commands;
 mod constant;
-mod utils;
 mod core;
+mod utils;
 
 use std::error::Error;
 use tauri::{App, Emitter, Listener, Manager, State, WindowEvent};
@@ -50,8 +50,11 @@ pub fn run() {
     builder
         .invoke_handler(tauri::generate_handler![
             commands::command::greet,
+            commands::command::is_elevated_command,
+            commands::command::get_exe_directory_command,
             commands::win_divert::win_divert_command,
             commands::win_divert::monitor_network_with_windivert_command,
+            commands::win_divert::recv_packet_command,
         ])
         .setup(main_setup())
         .run(tauri::generate_context!())

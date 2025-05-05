@@ -4,20 +4,14 @@ import type { CommandType } from '@/types/command'
 
 const commands: CommandType[] = [
   {
-    name: 'win_divert_command',
-    description: '显示所有网络连接信息',
+    name: 'is_elevated_command',
+    description: '是否有管理员权限',
     params: [],
     result: null,
   },
   {
-    name: 'monitor_network_with_windivert_command',
-    description: '使用WinDivert监控网络数据包',
-    params: [],
-    result: null,
-  },
-  {
-    name: 'recv_packet_command',
-    description: '安全接收数据包的辅助函数',
+    name: 'get_exe_directory_command',
+    description: '获取程序所在目录',
     params: [],
     result: null,
   },
