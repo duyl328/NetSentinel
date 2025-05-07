@@ -55,6 +55,7 @@ pub fn run() {
             commands::win_divert::win_divert_command,
             commands::win_divert::monitor_network_with_windivert_command,
             commands::win_divert::recv_packet_command,
+            commands::win_divert::recv_packet_command1,
         ])
         .setup(main_setup())
         .run(tauri::generate_context!())
