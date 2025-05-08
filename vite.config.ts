@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
     // 防止 Vite 掩盖 Rust 错误
     clearScreen: false,
     server: {
-      port: 1420,
+      port: 3000,
       // Tauri 需要一个固定端口，如果该端口不可用，则失败
       strictPort: true,
       // 如果设置了 Tauri 期望的主机，请使用它
@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
         ? {
           protocol: 'ws',
           host,
-          port: 1421,
+          port: 3000,
         }
         : undefined,
       

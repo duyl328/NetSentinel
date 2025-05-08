@@ -21,6 +21,12 @@ const commands: CommandType[] = [
     params: [],
     result: null,
   },
+  {
+    name: 'recv_packet_command1',
+    description: '外部包接口！',
+    params: [],
+    result: null,
+  },
 ]
 </script>
 
