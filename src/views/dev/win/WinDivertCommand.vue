@@ -27,6 +27,26 @@ const commands: CommandType[] = [
     params: [],
     result: null,
   },
+  {
+    name: 'get_all_tcp_info',
+    description: '获取所有 TCP 信息!',
+    params: [],
+    result: null,
+  },
+  {
+    name: 'get_more_info',
+    description: 'get_more_info',
+    params: [
+      {
+        name: 'id',
+        label: 'id',
+        type: 'text',
+        value: 'Vue',
+        placeholder: 'text'
+      }
+    ],
+    result: null,
+  },
 ]
 </script>
 

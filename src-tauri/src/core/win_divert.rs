@@ -16,6 +16,7 @@ use windows::Win32::NetworkManagement::IpHelper::{
 use windows::Win32::System::ProcessStatus::GetModuleFileNameExA;
 use windows::Win32::System::Threading::OpenProcess;
 use windows::Win32::System::Threading::{PROCESS_QUERY_INFORMATION, PROCESS_VM_READ};
+use crate::utils::win_utils::{get_tcp_connections, get_udp_connections};
 
 /// WinDivert错误码
 pub enum WinDivertError {
@@ -347,56 +348,7 @@ pub struct WinDivertUdpHdr {
     pub checksum: u16,
 }
 
-// TCP/UDP表类型常量
-/// TCP连接表类型(包含PID)
-const TCP_TABLE_OWNER_PID_ALL: TCP_TABLE_CLASS = TCP_TABLE_CLASS(5);
-/// UDP连接表类型(包含PID)
-const UDP_TABLE_OWNER_PID_ALL: UDP_TABLE_CLASS = UDP_TABLE_CLASS(1);
 
-#[repr(C)]
-struct TcpTableOwnerPid {
-    /// 条目数量
-    entry_count: u32,
-    /// 连接记录表
-    table: [TcpRowOwnerPid; 1],
-}
-
-/// TCP连接记录结构
-#[repr(C)]
-struct TcpRowOwnerPid {
-    /// 连接状态
-    state: u32,
-    /// 本地IP地址
-    local_addr: u32,
-    /// 本地端口
-    local_port: u32,
-    /// 远程IP地址
-    remote_addr: u32,
-    /// 远程端口
-    remote_port: u32,
-    /// 所属进程ID
-    owning_pid: u32,
-}
-
-/// UDP连接表结构
-#[repr(C)]
-struct UdpTableOwnerPid {
-    /// 条目数量
-    entry_count: u32,
-    /// 连接记录表
-    table: [UdpRowOwnerPid; 1],
-}
-
-/// UDP连接记录结构
-#[repr(C)]
-struct UdpRowOwnerPid {
-    /// 本地IP地址
-    local_addr: u32,
-    /// 本地端口
-    local_port: u32,
-    /// 所属进程ID
-    owning_pid: u32,
-}
 
 /// TCP IPv6连接记录结构
 #[repr(C)]
@@ -432,26 +384,6 @@ struct Udp6RowOwnerPid {
     owning_pid: u32,
 }
 
-/// 网络连接信息结构
-#[derive(Debug)]
-struct ConnectionInfo {
-    /// 协议类型
-    protocol: String,
-    /// 本地IP地址
-    local_addr: String,
-    /// 本地端口号
-    local_port: u16,
-    /// 远程IP地址(可选)
-    remote_addr: Option<String>,
-    /// 远程端口号(可选)
-    remote_port: Option<u16>,
-    /// 进程ID(可选)
-    process_id: Option<u32>,
-    /// 进程名称(可选)
-    process_name: Option<String>,
-    /// 连接状态(可选)
-    state: Option<String>,
-}
 
 /// TCP连接表结构
 #[link(name = "WinDivert")]
@@ -556,168 +488,7 @@ fn ntohs(netshort: u16) -> u16 {
     ((netshort & 0xff) << 8) | ((netshort >> 8) & 0xff)
 }
 
-/// 获取进程名称
-fn get_process_name(pid: u32) -> Option<String> {
-    unsafe {
-        // 打开进程句柄
-        let process_handle =
-            OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid).ok()?;
 
-        // 获取进程路径
-        let mut buffer = [0u8; 260]; // MAX_PATH
-        let result = GetModuleFileNameExA(Some(process_handle), None, &mut buffer);
-
-        if result == 0 {
-            return None;
-        }
-
-        // 转换为Rust字符串
-        let path = CStr::from_ptr(buffer.as_ptr() as *const i8)
-            .to_string_lossy()
-            .into_owned();
-
-        // 提取进程名
-        path.split('\\').last().map(|s| s.to_string())
-    }
-}
-
-/// 获取TCP连接列表
-fn get_tcp_connections() -> Vec<ConnectionInfo> {
-    let mut result = Vec::new();
-    unsafe {
-        let mut table_size: u32 = 0;
-        let mut ret = GetExtendedTcpTable(
-            Some(ptr::null_mut()),
-            &mut table_size,
-            true,
-            2, // AF_INET (IPv4)
-            TCP_TABLE_OWNER_PID_ALL,
-            0,
-        );
-
-        if table_size == 0 {
-            return result;
-        }
-
-        let mut buffer = vec![0u8; table_size as usize];
-        ret = GetExtendedTcpTable(
-            Some(buffer.as_mut_ptr() as *mut c_void),
-            &mut table_size,
-            true,
-            2, // AF_INET (IPv4)
-            TCP_TABLE_OWNER_PID_ALL,
-            0,
-        );
-
-        if ret != 0 {
-            return result;
-        }
-
-        let table = &*(buffer.as_ptr() as *const TcpTableOwnerPid);
-        let num_entries = table.entry_count;
-        let table_ptr = buffer.as_ptr().add(mem::size_of::<u32>()) as *const TcpRowOwnerPid;
-
-        for i in 0..num_entries {
-            let entry = &*table_ptr.add(i as usize);
-            let local_ip = Ipv4Addr::from(entry.local_addr.to_be());
-            let remote_ip = Ipv4Addr::from(entry.remote_addr.to_be());
-
-            // 端口转换(网络字节序到主机字节序)
-            let local_port = ((entry.local_port & 0xFF) << 8) | ((entry.local_port >> 8) & 0xFF);
-            let remote_port = ((entry.remote_port & 0xFF) << 8) | ((entry.remote_port >> 8) & 0xFF);
-
-            let state = match entry.state {
-                1 => "CLOSED".to_string(),
-                2 => "LISTENING".to_string(),
-                3 => "SYN_SENT".to_string(),
-                4 => "SYN_RCVD".to_string(),
-                5 => "ESTABLISHED".to_string(),
-                6 => "FIN_WAIT1".to_string(),
-                7 => "FIN_WAIT2".to_string(),
-                8 => "CLOSE_WAIT".to_string(),
-                9 => "CLOSING".to_string(),
-                10 => "LAST_ACK".to_string(),
-                11 => "TIME_WAIT".to_string(),
-                12 => "DELETE_TCB".to_string(),
-                _ => format!("UNKNOWN({})", entry.state),
-            };
-
-            let process_name = get_process_name(entry.owning_pid);
-
-            result.push(ConnectionInfo {
-                protocol: "TCP".to_string(),
-                local_addr: local_ip.to_string(),
-                local_port: local_port as u16,
-                remote_addr: Some(remote_ip.to_string()),
-                remote_port: Some(remote_port as u16),
-                process_id: Some(entry.owning_pid),
-                process_name,
-                state: Some(state),
-            });
-        }
-    }
-    result
-}
-
-/// 获取UDP连接列表
-fn get_udp_connections() -> Vec<ConnectionInfo> {
-    let mut result = Vec::new();
-    unsafe {
-        let mut table_size: u32 = 0;
-        let mut ret = GetExtendedUdpTable(
-            Some(ptr::null_mut()),
-            &mut table_size,
-            true,
-            2, // AF_INET (IPv4)
-            UDP_TABLE_OWNER_PID_ALL,
-            0,
-        );
-
-        if table_size == 0 {
-            return result;
-        }
-
-        let mut buffer = vec![0u8; table_size as usize];
-        ret = GetExtendedUdpTable(
-            Some(buffer.as_mut_ptr() as *mut c_void),
-            &mut table_size,
-            true,
-            2, // AF_INET (IPv4)
-            UDP_TABLE_OWNER_PID_ALL,
-            0,
-        );
-
-        if ret != 0 {
-            return result;
-        }
-
-        let table = &*(buffer.as_ptr() as *const UdpTableOwnerPid);
-        let num_entries = table.entry_count;
-        let table_ptr = buffer.as_ptr().add(mem::size_of::<u32>()) as *const UdpRowOwnerPid;
-
-        for i in 0..num_entries {
-            let entry = &*table_ptr.add(i as usize);
-            let local_ip = Ipv4Addr::from(entry.local_addr.to_be());
-
-            // 端口转换(网络字节序到主机字节序)
-            let local_port = ((entry.local_port & 0xFF) << 8) | ((entry.local_port >> 8) & 0xFF);
-
-            let process_name = get_process_name(entry.owning_pid);
-
-            result.push(ConnectionInfo {
-                protocol: "UDP".to_string(),
-                local_addr: local_ip.to_string(),
-                local_port: local_port as u16,
-                remote_addr: None,
-                remote_port: None,
-                process_id: Some(entry.owning_pid),
-                process_name,
-                state: None,
-            });
-        }
-    }
-    result
-}
 
 /// WinDivert参数常量
 const WINDIVERT_PARAM_QUEUE_LENGTH: u32 = 1; // 队列长度参数

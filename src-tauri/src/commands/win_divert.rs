@@ -7,6 +7,7 @@ use std::ffi::c_void;
 use std::mem::{size_of, zeroed};
 use std::net::Ipv4Addr;
 use std::ptr::null_mut;
+use sysinfo::System;
 use tauri_plugin_dialog::DialogExt;
 use windivert::error::WinDivertError;
 use windivert::layer::NetworkLayer;
@@ -17,6 +18,7 @@ use windivert_sys::{WinDivertFlags, WinDivertLayer};
 use windows::Win32::Foundation::*;
 use windows::Win32::NetworkManagement::IpHelper::*;
 use windows::Win32::Networking::WinSock::*;
+use crate::utils::win_utils::{get_tcp_connections, get_udp_connections};
 
 /// 显示所有网络连接信息
 #[tauri::command]
@@ -82,12 +84,13 @@ pub fn recv_packet_command1() {
 
                                     // 获取TCP标志
                                     let flags = tcp_packet.get_flags();
-                                    println!("SYN: {}, ACK: {}, FIN: {}, RST: {}, PSH: {}, TCP Flags: {:#010b}",
+                                    println!("SYN: {}, ACK: {}, FIN: {}, RST: {}, PSH: {}, TCP Flags: {:#010b}, src: {}, dst: {} ,x: {}",
                                              flags & TcpFlags::SYN != 0,
                                              flags & TcpFlags::ACK != 0,
                                              flags & TcpFlags::FIN != 0,
                                              flags & TcpFlags::RST != 0,
-                                             flags & TcpFlags::PSH != 0,flags);
+                                             flags & TcpFlags::PSH != 0,flags,
+                                    src,dst,x.len());
 
                                     // 获取序列号和确认号
                                     println!("Sequence Number: {} | Acknowledgment Number->{} \
@@ -125,6 +128,68 @@ pub fn recv_packet_command1() {
     }
 }
 
+/// 显示所有网络连接信息
+#[tauri::command]
+pub fn get_all_tcp_info() {
+    log::info!("正在获取系统网络连接信息...\n");
+
+    // 获取TCP连接
+    let tcp_connections = get_tcp_connections();
+    log::info!("TCP连接 ({}个):", tcp_connections.len());
+    log::info!(
+        "{:<5} {:<15} {:<8} {:<15} {:<8} {:<15} {:<20} {:<25}",
+        "协议",
+        "本地IP",
+        "本地端口",
+        "远程IP",
+        "远程端口",
+        "进程ID",
+        "进程名",
+        "状态",
+    );
+    log::info!("{:-<90}", "");
+
+    for conn in tcp_connections {
+        log::info!(
+            "{:<5} {:<15} {:<8} {:<15} {:<8} {:<15} {:<20} {:<25}",
+            conn.protocol,
+            conn.local_addr,
+            conn.local_port,
+            conn.remote_addr.unwrap_or_default(),
+            conn.remote_port.unwrap_or_default(),
+            conn.process_id.unwrap_or_default(),
+            conn.process_name.unwrap_or_default(),
+            conn.state.unwrap_or_default()
+        );
+    }
+
+    log::info!("\n");
+
+    // 获取UDP连接
+    let udp_connections = get_udp_connections();
+    log::info!("UDP连接 ({}个):", udp_connections.len());
+    log::info!(
+        "{:<5} {:<15} {:<8} {:<15} {:<20}",
+        "协议",
+        "本地IP",
+        "本地端口",
+        "进程ID",
+        "进程名"
+    );
+    log::info!("{:-<70}", "");
+
+    for conn in udp_connections {
+        log::info!(
+            "{:<5} {:<15} {:<8} {:<15} {:<20}",
+            conn.protocol,
+            conn.local_addr,
+            conn.local_port,
+            conn.process_id.unwrap_or_default(),
+            conn.process_name.unwrap_or_default()
+        );
+    }
+}
+
 /// 安全接收数据包的辅助函数
 #[tauri::command]
 pub fn recv_packet_command() {
@@ -149,4 +214,32 @@ pub fn recv_packet_command() {
     //         eprintln!("Receive failed.");
     //     }
     // }
+}
+/// 获取线程 ID 信息
+#[tauri::command]
+pub fn get_more_info(id:String) {
+    log::info!("{:?}", "获取线程 ID 信息");
+    // 创建系统信息实例
+    let mut system = System::new_all();
+    let n: usize = id.parse().unwrap();
+
+    // 刷新所有进程信息
+    system.refresh_all();
+
+    // 假设已知的PID
+    let pid = sysinfo::Pid::from(n); // 替换为您的实际PID
+
+    // 尝试获取进程信息
+    if let Some(process) = system.process(pid) {
+        println!("进程名称: {:?}", process.name());
+        println!("可执行文件路径: {:?}", process.exe());
+        println!("命令行: {:?}", process.cmd());
+        println!("内存使用: {} KB", process.memory() / 1024);
+        println!("CPU使用率: {}%", process.cpu_usage());
+        println!("运行时间: {} 秒", process.run_time());
+        println!("父进程ID: {:?}", process.parent());
+        println!("状态: {:?}", process.status());
+    } else {
+        println!("未找到PID为{}的进程", pid);
+    }
 }
